@@ -51,7 +51,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       PACA_A_SHA: 7358f8baba35d337873c627caafb6166fa973f66
-      PACA_C_SHA: a868173176bb7ba21571f2874533655bd82b59d8
+      PACA_C_SHA: 151ca07aabab49587f01f9e833c3cda9bd6ee431
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
