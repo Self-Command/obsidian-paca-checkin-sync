@@ -1,0 +1,47 @@
+name: Check and package
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install locked dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --package-lock-only && npm ci; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-lock
+          path: package-lock.json
+      - name: Portable contract and production checks
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+          npm run build
+          ! grep -E 'require\("(node:|fs|http|electron)' main.js
+      - name: Package source-bound plugin candidate
+        run: |
+          mkdir -p release/obsidian-paca-checkin-sync
+          cp main.js manifest.json styles.css release/obsidian-paca-checkin-sync/
+          jq -n --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" '{source_sha:$sha,action_run:$run,phone_verified:false}' > release/build-info.json
+          cd release
+          zip -r obsidian-paca-checkin-sync.zip obsidian-paca-checkin-sync
+          sha256sum obsidian-paca-checkin-sync.zip obsidian-paca-checkin-sync/* build-info.json > checksums.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-candidate
+          path: release/

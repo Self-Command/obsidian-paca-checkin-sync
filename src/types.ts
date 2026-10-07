@@ -1,0 +1,12 @@
+export interface Task {path:string;title:string;status:string;dateCreated?:string;archived?:boolean}
+export interface Source {source_ref:string;connection_id:string;path:string;aliases?:string[];snapshot:{status:string;dateCreated?:string;title?:string}}
+export interface Checkin {cursor:number;record_id:string;instance_id:string;task_id:string;revision:number;current_revision:number;logical_status:string;paca_status_id:string;kind:'start'|'due';submitted_at:string;note:string;media_id:string;media_sha256:string;media_bytes:number;media_mime:string;media_expired:boolean;source:Source}
+export interface Settings {address:string;token:string;auto:boolean;minutes:number;attachments:string;started:string;completed:string;pacaStates:Record<string,string>}
+export const defaults:Settings={address:'',token:'',auto:true,minutes:5,attachments:'PushGo附件',started:'in-progress',completed:'done',pacaStates:{}};
+export interface Pending {item:Checkin;photo?:string;expired?:boolean;done?:boolean;problem?:string;conflict?:string}
+export interface Link {path:string;created?:string;status:string;revision:number;blockHash?:string;pendingStatus?:string;pendingBody?:string;receiptBase?:string;receiptRevision?:number;conflict?:string;conflictChoice?:'server'|'local'}
+export interface State {cursor:number;pending:Record<string,Pending>;links:Record<string,Link>;media:Record<string,{path:string;sha:string}>}
+export const emptyState=():State=>({cursor:0,pending:{},links:{},media:{}});
+export interface Host {task(path:string):Promise<Task|null>;tasks():Promise<Task[]>;taskFolder():string;read(path:string):Promise<string>;process(path:string,transform:(text:string)=>string):Promise<void>;setStatus(path:string,status:string):Promise<void>;exists(path:string):boolean;binary(path:string):Promise<ArrayBuffer>;writeBinary(path:string,data:ArrayBuffer):Promise<void>;mkdir(path:string):Promise<void>;save():Promise<void>}
+export interface Server {changes(after:number):Promise<{items:Checkin[];next_cursor:number;has_more:boolean}>;source(task:string):Promise<Source>;media(id:string):Promise<ArrayBuffer>;receipt(item:Checkin,op:string,status:string,base:string,path:string,hash:string):Promise<{id:string}>;ack(id:string,status:string,path:string,hash:string):Promise<void>;conflict(item:Checkin,local:string):Promise<{id:string}>;resolve(id:string,item:Checkin,keep:'server'|'local',status?:string):Promise<void>}
+export class SyncProblem extends Error {constructor(public code:string,public userMessage:string){super(userMessage)}}

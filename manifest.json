@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-paca-checkin-sync",
+  "name": "Paca 打卡同步",
+  "version": "0.1.0",
+  "minAppVersion": "1.8.0",
+  "description": "同步 Paca 打卡状态、记录和照片，配合官方 TaskNotes 使用。",
+  "author": "Self-Command",
+  "authorUrl": "https://github.com/Self-Command",
+  "isDesktopOnly": false
+}
