@@ -85,6 +85,7 @@ jobs:
           OBSIDIAN_EXTRA_E2E: ${{ github.workspace }}/scripts/e2e-ui.py
         run: |
           printf 'package buildinfo\nfunc init() { SourceSHA = "%s" }\n' "$PACA_A_SHA" > internal/buildinfo/stamp.go
+          export GITHUB_REPOSITORY=Self-Command/paca-plugin-tasknotes-webhook
           go build -trimpath -o /tmp/tasknotes-worker ./cmd/worker
           bun scripts/tasknotes-fixture.ts
           python3 scripts/host-smoke.py
