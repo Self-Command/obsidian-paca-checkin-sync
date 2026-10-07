@@ -50,14 +50,14 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
-      PACA_A_SHA: 189daa0bd6e309a2e753cf299978f11fb6a1dc7d
+      PACA_A_SHA: 7358f8baba35d337873c627caafb6166fa973f66
       PACA_C_SHA: a868173176bb7ba21571f2874533655bd82b59d8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
           repository: Self-Command/paca-plugin-tasknotes-webhook
-          ref: 189daa0bd6e309a2e753cf299978f11fb6a1dc7d
+          ref: 7358f8baba35d337873c627caafb6166fa973f66
           path: acceptance/a
       - uses: actions/download-artifact@v4
         with:
