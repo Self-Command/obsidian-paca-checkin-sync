@@ -8,14 +8,14 @@ for attempt in range(30):
 else:raise RuntimeError('The pinned A source has not passed its Actions checks')
 subprocess.run(['gh','run','download',str(runs[0]['id']),'--repo',repo,'-n','plugin-build','-D',str(a/'release')],check=True)
 ainfo=json.loads((a/'release/assets/build-info.json').read_text());assert ainfo['source_sha']==source
-release='https://github.com/Self-Command/paca-plugin-task-checkin/releases/download/v0.1.0-dev.21/'
+release='https://github.com/Self-Command/paca-plugin-task-checkin/releases/download/v0.1.0-dev.23/'
 def download(name):
-    for attempt in range(5):
+    for attempt in range(60):
         try:
             with urllib.request.urlopen(release+name,timeout=60) as response:return response.read()
         except OSError:
-            if attempt==4:raise
-            time.sleep(attempt+1)
+            if attempt==59:raise
+            time.sleep(10)
 checks=download('checksums.txt').decode();package=download('plugin-install.tar.gz');expected=next(x.split()[0] for x in checks.splitlines() if x.endswith('plugin-install.tar.gz'));assert hashlib.sha256(package).hexdigest()==expected
 cinfo=json.loads(download('build-info.json'));assert cinfo['source_sha']==os.environ['PACA_C_SHA']
 with tarfile.open(fileobj=io.BytesIO(package),mode='r:gz') as archive:archive.extractall(a/'release',filter='data')
