@@ -9,3 +9,5 @@ test('dateCreated distinguishes a new file generation with the same path',async(
 test('date-only old record can sync photos without overwriting a newer state',async()=>{const f=await fixture();f.item.current_revision=2;await f.engine.run();assert.equal(f.counts().statusWrites,0);assert.equal(f.media.size,1)});
 test('attachment folder excludes task folder, nested task paths, hidden traversal',()=>{for(const folder of ['Tasks','tasks/images','../照片','.obsidian/x','照片/../x'])assert.throws(()=>safeFolder(folder,'Tasks'),SyncProblem);assert.equal(safeFolder('PushGo附件/','Tasks'),'PushGo附件');assert.throws(()=>safeFolder('照片',''),SyncProblem)});
 test('malformed or duplicate managed sections require human repair',()=>{assert.throws(()=>managed('<!-- paca-checkin:start -->'),SyncProblem);assert(makeBlock([]).includes('拍照打卡'))});
+
+test('invalid media names and checksums never create attachment paths',async()=>{const f=await fixture();f.item.media_id='../bad';await f.engine.run();assert.equal(f.counts().downloads,0);assert.equal(f.media.size,0);assert(f.state.pending.record.problem?.includes('照片信息'))});
