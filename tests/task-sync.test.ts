@@ -50,3 +50,18 @@ test('a materialized child replaces its inherited mother marker and retains priv
  const result=replaceSharedBody(inherited,'本期正文',child);
  assert(result.includes(`<!-- paca-sync-id:${child} -->`));assert(!result.includes(`<!-- paca-sync-id:${mother} -->`));assert.equal(sharedBody(result),'本期正文');assert(result.includes('私人记录'));
 });
+
+
+test('canonical period association moves every queued edit to the preserved task',async()=>{
+ const f=fixture();await f.engine.run();
+ const child={path:'Tasks/离线周期.md',dateCreated:'2026-10-08T01:00:00Z',title:'离线周期',status:'open',recurrence_parent:f.id,occurrence_date:'2026-10-09'};
+ await f.engine.capture('create',undefined,child);
+ await f.engine.capture('update',child,{...child,title:'第一次修改'},{title:{before:child.title,after:'第一次修改'}});
+ await f.engine.capture('update',{...child,title:'第一次修改'},{...child,title:'第二次修改'},{title:{before:'第一次修改',after:'第二次修改'}});
+ const queued=Object.values(f.state.operations),create=queued[0].body.op_id,canonical='33333333-3333-4333-8333-333333333333';
+ f.server.operation=async id=>id===create?{state:'superseded',result:{sync_id:canonical}}:{state:'pending'};
+ await f.engine.run();
+ assert.equal(Object.keys(f.state.operations).length,2);
+ assert(Object.values(f.state.operations).every(row=>row.body.sync_id===canonical));
+ assert.equal(f.state.links[canonical].path,child.path);
+});
