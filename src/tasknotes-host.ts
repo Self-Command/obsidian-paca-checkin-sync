@@ -29,7 +29,7 @@ export function taskHost(app:App,save:()=>Promise<void>,bound:(id:string,link:Ta
   create:async(snapshot,id)=>{const created=await tasknotes(app).tasks.create({...patchFields(snapshot),details:replaceSharedBody('',String(snapshot.details??''),id),customFrontmatter:{paca_sync_id:id}},mutationContext());if(snapshot.archived===true)return tasknotes(app).tasks.archive(created.path,true,mutationContext());return created},
   update:async(path,snapshot,id)=>{const patch=patchFields(snapshot);if('details' in snapshot)patch.details=replaceSharedBody(await body(path),String(snapshot.details??''),id);let result=Object.keys(patch).length?await tasknotes(app).tasks.update(path,patch,mutationContext()):await tasknotes(app).tasks.get(path);if(!result)throw new SyncProblem('missing','对应任务笔记未找到。');if('archived' in snapshot)result=await tasknotes(app).tasks.archive(result.path,Boolean(snapshot.archived),mutationContext());return result},
   delete:path=>tasknotes(app).tasks.delete(path,mutationContext()),
-  snapshot:async(task:SyncedTask)=>{const snapshot:TaskSnapshot={};for(const key of taskFields)snapshot[key]=task[key]??null;snapshot.tags=task.tags??[];snapshot.archived=Boolean(task.archived);snapshot.details=sharedBody(typeof task.details==='string'?task.details:await body(task.path));return snapshot},
+  snapshot:async(task:SyncedTask)=>{const snapshot:TaskSnapshot={};for(const key of taskFields)snapshot[key]=task[key]??null;snapshot.tags=task.tags??[];snapshot.archived=Boolean(task.archived);snapshot.details=sharedBody(await body(task.path));return snapshot},
   save,bound,
  };
 }
