@@ -30,7 +30,7 @@ sync_pull();no_sync_problems()
 links=sync_links();assert len(links)==6,links
 assert all(link['base']['scheduled'] is None for link in links.values()),'date-only defaults became a server schedule'
 local_tasks=ui_page.evaluate('async()=>app.plugins.plugins.tasknotes.api.tasks.list()')
-assert len([t for t in local_tasks if t['title']=='同名任务'])==2,'same-title imports were merged'
+assert len([t for t in local_tasks if t['title']=='同名任务'])==2,{'reason':'same-title imports were merged','tasks':[{'title':t['title'],'path':t['path']} for t in local_tasks]}
 assert any(t['title']=='已有完成任务' and t['status']=='done' for t in local_tasks)
 assert any(t['title']=='已有归档任务' and t.get('archived') for t in local_tasks)
 for _ in range(3):sync_pull()
