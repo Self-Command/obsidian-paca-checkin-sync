@@ -1,8 +1,8 @@
-export interface Task {path:string;title:string;status:string;dateCreated?:string;archived?:boolean}
+export interface Task {path:string;title:string;status:string;dateCreated?:string;archived?:boolean;[key:string]:unknown}
 export interface Source {source_ref:string;connection_id:string;path:string;aliases?:string[];snapshot:{status:string;dateCreated?:string;title?:string}}
 export interface Checkin {cursor:number;record_id:string;instance_id:string;task_id:string;revision:number;current_revision:number;logical_status:string;paca_status_id:string;kind:'start'|'due';submitted_at:string;note:string;media_id:string;media_sha256:string;media_bytes:number;media_mime:string;media_expired:boolean;source:Source}
-export interface Settings {address:string;token:string;auto:boolean;minutes:number;attachments:string;started:string;completed:string;pacaStates:Record<string,string>}
-export const defaults:Settings={address:'',token:'',auto:true,minutes:5,attachments:'PushGo附件',started:'in-progress',completed:'done',pacaStates:{}};
+export interface Settings {address:string;token:string;taskToken:string;deviceID:string;taskSync:boolean;checkinSync:boolean;auto:boolean;minutes:number;attachments:string;started:string;completed:string;pacaStates:Record<string,string>}
+export const defaults:Settings={address:'',token:'',taskToken:'',deviceID:'',taskSync:false,checkinSync:true,auto:true,minutes:5,attachments:'PushGo附件',started:'in-progress',completed:'done',pacaStates:{}};
 export interface Pending {item:Checkin;photo?:string;expired?:boolean;done?:boolean;problem?:string;conflict?:string}
 export interface Link {path:string;created?:string;status:string;revision:number;blockHash?:string;pendingStatus?:string;pendingBody?:string;receiptBase?:string;receiptRevision?:number;conflict?:string;conflictChoice?:'server'|'local'}
 export interface State {cursor:number;pending:Record<string,Pending>;links:Record<string,Link>;media:Record<string,{path:string;sha:string}>}
