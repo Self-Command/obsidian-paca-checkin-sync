@@ -1,3 +1,4 @@
+import {sharedTaskTags} from './task-tags';
 import {TFile,getFrontMatterInfo,type App,type EventRef} from 'obsidian';
 import {SyncProblem,type Task} from './types';
 import {sharedBody,replaceSharedBody} from './task-sync-engine';
@@ -10,7 +11,7 @@ export interface TaskNotesApi {
  tasks:{get(path:string):Promise<Task|null>;list():Promise<Task[]>;create(data:Record<string,unknown>,context?:MutationContext):Promise<Task>;update(path:string,patch:Record<string,unknown>,context?:MutationContext):Promise<Task>;delete(path:string,context?:MutationContext):Promise<void>;archive(path:string,value:boolean,context?:MutationContext):Promise<Task>;setStatus(path:string,status:string,context?:MutationContext):Promise<Task>};
  events:{on(name:string,callback:(event:TaskEvent)=>void):EventRef;off(ref:EventRef):void};
  catalog:{statuses():{value:string;label:string}[]};
- settings:{snapshot():{tasksFolder:string}};
+ settings:{snapshot():{tasksFolder:string;taskTag?:string;fieldMapping?:{archiveTag?:string}}};
 }
 export function tasknotes(app:App):TaskNotesApi {
  const registry=(app as App&{plugins:{plugins:Record<string,{api?:TaskNotesApi}>}}).plugins;
@@ -29,7 +30,7 @@ export function taskHost(app:App,save:()=>Promise<void>,bound:(id:string,link:Ta
   create:async(snapshot,id)=>{const created=await tasknotes(app).tasks.create({...patchFields(snapshot),details:replaceSharedBody('',String(snapshot.details??''),id),customFrontmatter:{paca_sync_id:id}},mutationContext());if(snapshot.archived===true)return tasknotes(app).tasks.archive(created.path,true,mutationContext());return created},
   update:async(path,snapshot,id)=>{const patch=patchFields(snapshot);if('details' in snapshot)patch.details=replaceSharedBody(await body(path),String(snapshot.details??''),id);let result=Object.keys(patch).length?await tasknotes(app).tasks.update(path,patch,mutationContext()):await tasknotes(app).tasks.get(path);if(!result)throw new SyncProblem('missing','对应任务笔记未找到。');if('archived' in snapshot)result=await tasknotes(app).tasks.archive(result.path,Boolean(snapshot.archived),mutationContext());return result},
   delete:path=>tasknotes(app).tasks.delete(path,mutationContext()),
-  snapshot:async(task:SyncedTask)=>{const snapshot:TaskSnapshot={};for(const key of taskFields)snapshot[key]=task[key]??null;snapshot.tags=task.tags??[];snapshot.archived=Boolean(task.archived);snapshot.details=sharedBody(await body(task.path));return snapshot},
+  snapshot:async(task:SyncedTask)=>{const snapshot:TaskSnapshot={};for(const key of taskFields)snapshot[key]=task[key]??null;snapshot.tags=sharedTaskTags(task.tags,tasknotes(app).settings.snapshot());snapshot.archived=Boolean(task.archived);snapshot.details=sharedBody(await body(task.path));return snapshot},
   save,bound,
  };
 }

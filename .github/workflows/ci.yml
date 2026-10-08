@@ -50,14 +50,15 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
-      PACA_A_SHA: b82b60b89378447d4a56d82df2cbc4a12a54a4bb
-      PACA_C_SHA: 73026ed43e1a868a2e010300aedfcf6074880672
+      PACA_A_SHA: 18a78dea741086d478c5fc96f68058c841ad1340
+      PACA_C_SHA: 7e55be626a604bb468e6586b70f733731b59adae
+      TASK_SYNC_E2E: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
           repository: Self-Command/paca-plugin-tasknotes-webhook
-          ref: b82b60b89378447d4a56d82df2cbc4a12a54a4bb
+          ref: 18a78dea741086d478c5fc96f68058c841ad1340
           path: acceptance/a
       - uses: actions/download-artifact@v4
         with:
@@ -116,5 +117,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="v0.1.0-dev.${{ github.run_number }}"
-          printf '官方 TaskNotes 配合使用的独立打卡同步插件。\n\n源码：%s\nAction 已验证构建与官方 Obsidian 回写，真实手机验证另行记录。\n' "$GITHUB_SHA" > release-notes.md
+          printf '配合官方 TaskNotes 的 Paca 任务、打卡记录及照片同步插件。\n\n源码：%s\nAction 已验证构建、普通双向同步与官方 Obsidian 照片回写，真实手机验证另行记录。\n' "$GITHUB_SHA" > release-notes.md
           gh release create "$version" --target "$GITHUB_SHA" --prerelease --title "$version" --notes-file release-notes.md release/obsidian-paca-checkin-sync.zip release/obsidian-paca-checkin-sync/main.js release/obsidian-paca-checkin-sync/manifest.json release/obsidian-paca-checkin-sync/styles.css release/checksums.txt release/build-info.json

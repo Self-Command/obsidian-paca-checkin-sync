@@ -42,3 +42,4 @@ rows=request('GET',f'/plugins/{plugin_id}/projects/{project["id"]}/connections/{
 assert not any(row['state'] in ('error','conflict') for row in rows),[{'state':r['state'],'error':r['error']} for r in rows]
 ui_page.screenshot(path=str(ROOT/'verification/obsidian-photo-writeback.png'))
 (ROOT/'verification/writeback-report.json').write_text(json.dumps({'d_source':os.environ['GITHUB_SHA'],'a_source':os.environ['PACA_A_SHA'],'c_source':os.environ['PACA_C_SHA'],'official_ui_created_task':True,'passwordless_mobile_photo':True,'paca_status_outbox':True,'public_tasknotes_api_status':True,'independent_photo_directory':True,'manual_command':True,'repeat_pull_no_extra_media':True,'writeback_echo_preserves_checkin_metadata':True,'phone_device_test':False},indent=2))
+if os.environ.get('TASK_SYNC_E2E')=='1':exec((D_ROOT/'scripts/e2e-task-sync.py').read_text(),globals(),locals())

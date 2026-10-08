@@ -8,7 +8,7 @@ for attempt in range(30):
 else:raise RuntimeError('The pinned A source has not passed its Actions checks')
 subprocess.run(['gh','run','download',str(runs[0]['id']),'--repo',repo,'-n','plugin-build','-D',str(a/'release')],check=True)
 ainfo=json.loads((a/'release/assets/build-info.json').read_text());assert ainfo['source_sha']==source
-release='https://github.com/Self-Command/paca-plugin-task-checkin/releases/download/v0.1.0-dev.24/'
+release='https://github.com/Self-Command/paca-plugin-task-checkin/releases/download/v0.1.0-dev.29/'
 def download(name):
     for attempt in range(60):
         try:

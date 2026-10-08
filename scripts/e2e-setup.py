@@ -37,7 +37,8 @@ class CheckinTlsProxy(BaseHTTPRequestHandler):
     def forward(self):
         body=self.rfile.read(int(self.headers.get('Content-Length',0))) or None
         headers={k:v for k,v in self.headers.items() if k.lower() not in ('host','content-length','connection')}
-        req=urllib.request.Request('http://127.0.0.1:19382'+self.path,data=body,method=self.command,headers=headers)
+        upstream='http://127.0.0.1:8091' if self.path.startswith('/task-sync/') else 'http://127.0.0.1:19382'
+        req=urllib.request.Request(upstream+self.path,data=body,method=self.command,headers=headers)
         try:
             with urllib.request.urlopen(req,timeout=25) as reply:status,payload,heads=reply.status,reply.read(),reply.headers
         except urllib.error.HTTPError as error:status,payload,heads=error.code,error.read(),error.headers
