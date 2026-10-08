@@ -35,7 +35,7 @@ export class TaskSyncEngine{
   for(const item of Object.values(this.state.pending)){try{if(Object.values(this.state.operations).some(op=>op.body.sync_id===item.sync_id))continue;await this.apply(item);delete this.state.pending[item.sync_id];delete this.state.problems[item.sync_id];await this.host.save()}catch(e){const message=e instanceof SyncProblem?e.userMessage:'任务暂时无法同步，请稍后重试。';this.state.problems[item.sync_id]=message;const link=this.state.links[item.sync_id];if(link)link.problem=message;await this.host.save()}}
  }
  private async locate(item:TaskChange):Promise<{task:SyncedTask;link:TaskLink}>{
-  let link=this.state.links[item.sync_id];let task:SyncedTask|null=null;
+  let link:TaskLink|undefined=this.state.links[item.sync_id];let task:SyncedTask|null=null;
   if(link?.intent){task=await this.host.find(item.sync_id);if(task){link.path=task.path;link.created=task.dateCreated??'';await this.host.save();return{task,link}}delete this.state.links[item.sync_id];link=undefined}
   if(link){task=await this.host.task(link.path);if(!task||task.dateCreated!==link.created)throw new SyncProblem('missing','任务笔记缺失或已替换，请重新关联。');return{task,link}}
   if(item.path){task=await this.host.task(item.path);if(!task||task.dateCreated!==item.note_created)throw new SyncProblem('missing','对应任务尚未到达当前设备，请等待笔记库同步。')}
