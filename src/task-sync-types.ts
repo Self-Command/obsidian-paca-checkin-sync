@@ -1,7 +1,7 @@
 export const taskFields=['title','details','scheduled','due','status','priority','tags','archived','recurrence','recurrence_anchor','complete_instances','skipped_instances','recurrence_parent','occurrence_date'] as const;
 export type TaskSnapshot=Partial<Record<typeof taskFields[number],unknown>>;
 export interface TaskChange{cursor:number;sync_id:string;task_id:string;revision:number;kind:'task'|'series'|'occurrence';deleted:boolean;path:string;note_created:string;source_ref:string;snapshot:TaskSnapshot;warnings?:string[]}
-export interface TaskLink{path:string;created:string;revision:number;base:TaskSnapshot;sourceRef:string;intent?:boolean;receipt?:string;receiptOp?:string;receiptRevision?:number;problem?:string;deleted?:boolean}
+export interface TaskLink{path:string;created:string;revision:number;base:TaskSnapshot;sourceRef:string;intent?:boolean;receipt?:string;receiptOp?:string;receiptRevision?:number;receiptExpected?:TaskSnapshot;receiptFields?:string[];problem?:string;deleted?:boolean}
 export interface TaskOperation{op_id:string;sync_id:string;base_revision:number;kind:'create'|'update'|'delete';base:TaskSnapshot;changes:TaskSnapshot;path?:string;note_created?:string}
 export interface LocalOperation{body:TaskOperation;state:'queued'|'pending'|'conflict'|'failed';problem?:string}
 export interface TaskSyncState{cursor:number;links:Record<string,TaskLink>;pending:Record<string,TaskChange>;operations:Record<string,LocalOperation>;problems:Record<string,string>}

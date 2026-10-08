@@ -70,6 +70,11 @@ open_edit(current_local());ui_page.locator('.tn-task-modal__archive-button').cli
 core_wait(lambda t:t['status_id']==sync_archive['id'])
 open_edit(current_local());ui_page.locator('.tn-task-modal__archive-button').click()
 core_wait(lambda t:t['status_id']==sync_status_map['open'])
+# Direct Markdown field edits are now an explicitly approved synchronization source.
+local=current_local()
+manual_start=(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(days=2)).strftime('%Y-%m-%d')+'T09:00:00'
+ui_page.evaluate(r"""async cfg=>{const file=app.vault.getAbstractFileByPath(cfg.path);let text=await app.vault.read(file);const line='scheduled: '+cfg.value;if(/^scheduled:.*$/m.test(text))text=text.replace(/^scheduled:.*$/m,line);else text=text.replace(/^(---\r?\n)/,(_all,head)=>head+line+'\n');await app.vault.modify(file,text)}""",{'path':local['path'],'value':manual_start})
+core_wait(lambda t:t.get('custom_fields',{}).get('_integration_state_v1',{}).get('start_source')==manual_start)
 no_sync_problems()
 request('DELETE',f'/projects/{sync_project["id"]}/tasks/{native_tasks[1]["id"]}',expected=200)
 second=next(item for item in request('GET',sync_base+'/sync-preview')['items'] if item['task_id']==native_tasks[1]['id'])
@@ -82,4 +87,5 @@ for _ in range(180):
 else:raise AssertionError('Paca delete did not trash the linked note')
 request('GET',f'/projects/{sync_project["id"]}/tasks/{native_tasks[0]["id"]}')
 ui_page.screenshot(path=str(ROOT/'verification/obsidian-bidirectional-tasks.png'))
-(ROOT/'verification/bidirectional-ui-report.json').write_text(json.dumps({'d_source':os.environ['GITHUB_SHA'],'a_source':os.environ['PACA_A_SHA'],'c_source':os.environ['PACA_C_SHA'],'real_official_obsidian':True,'paca_api_batch_without_checkin':True,'all_completed_archived_imported':True,'same_title_remains_separate':True,'repeated_sync_no_duplicate':True,'paca_patch_to_tasknotes':True,'tasknotes_ui_patch_same_paca_task':True,'paca_delete_trashes_note':True,'tasknotes_ui_complete_restore_archive_unarchive':True,'real_phone':False},ensure_ascii=False,indent=2))
+(ROOT/'verification/bidirectional-ui-report.json').write_text(json.dumps({'d_source':os.environ['GITHUB_SHA'],'a_source':os.environ['PACA_A_SHA'],'c_source':os.environ['PACA_C_SHA'],'real_official_obsidian':True,'paca_api_batch_without_checkin':True,'all_completed_archived_imported':True,'same_title_remains_separate':True,'repeated_sync_no_duplicate':True,'paca_patch_to_tasknotes':True,'tasknotes_ui_patch_same_paca_task':True,'paca_delete_trashes_note':True,'tasknotes_ui_complete_restore_archive_unarchive':True,'direct_markdown_field_edit_synced':True,'real_phone':False},ensure_ascii=False,indent=2))
+exec((D_ROOT/'scripts/e2e-recurrence.py').read_text(),globals(),locals())

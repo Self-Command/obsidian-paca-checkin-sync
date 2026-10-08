@@ -50,15 +50,15 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
-      PACA_A_SHA: c128c0fea1930b3710882ffd78f5e3cc1fe9e0e0
-      PACA_C_SHA: 7e55be626a604bb468e6586b70f733731b59adae
+      PACA_A_SHA: 232c602d566697da5eba256b2a8b5e57da8d7701
+      PACA_C_SHA: 84c4c5457156445fef36b9471daf8762f5aaa50d
       TASK_SYNC_E2E: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
           repository: Self-Command/paca-plugin-tasknotes-webhook
-          ref: c128c0fea1930b3710882ffd78f5e3cc1fe9e0e0
+          ref: 232c602d566697da5eba256b2a8b5e57da8d7701
           path: acceptance/a
       - uses: actions/download-artifact@v4
         with:
@@ -67,11 +67,17 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.3.0'
       - name: Pin verified source and independent artifacts
         run: python3 scripts/e2e-prepare.py
+      - name: Locked official recurrence runtime
+        working-directory: acceptance/a/recurrence
+        run: npm ci --ignore-scripts
       - name: Official browser and app runtime
         run: |
           sudo apt-get update -qq

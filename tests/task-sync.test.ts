@@ -26,3 +26,20 @@ test('ordinary content excludes check-in images and preserves private blocks on 
 test('UI rename retains association when the former path no longer exists',async()=>{const f=fixture();await f.engine.run();const original=[...f.tasks.values()][0];const before={...original};f.tasks.delete(before.path);const renamed={...original,path:'Tasks/修改标题.md',title:'修改标题'};f.tasks.set(renamed.path,renamed);f.host.snapshot=async t=>{if(!f.tasks.has(t.path))throw Error('old note path is gone');return {...t} as TaskSnapshot};await f.engine.capture('update',before,renamed,{title:{before:before.title,after:renamed.title}});const operation=Object.values(f.state.operations)[0];assert.equal(operation.body.sync_id,f.id);assert.equal(f.state.links[f.id].path,renamed.path);assert.deepEqual(operation.body.changes,{title:'修改标题'})});
 
 test('cache-created echoes and normalized tag refreshes do not queue user operations',async()=>{const f=fixture();await f.engine.run();const task=[...f.tasks.values()][0];await f.engine.capture('create',undefined,task);await f.engine.capture('update',task,task,{tags:{before:['学习'],after:['学习']}});assert.equal(Object.keys(f.state.operations).length,0)});
+
+test('a crash after write but before receipt acknowledgment does not create a false conflict',async()=>{
+ const f=fixture();await f.engine.run();const acknowledge=f.server.ack;let lost=true;
+ f.server.ack=async(...args)=>{if(lost){lost=false;throw Error('response lost')}return acknowledge(...args)};
+ f.item.cursor++;f.item.revision++;f.item.snapshot.title='第一次服务器修改';await f.engine.run();
+ assert(f.state.links[f.id].receiptExpected);assert.equal([...f.tasks.values()][0].title,'第一次服务器修改');
+ f.item.cursor++;f.item.revision++;f.item.snapshot.priority='high';await f.engine.run();
+ assert.deepEqual(f.state.problems,{});assert.equal([...f.tasks.values()][0].title,'第一次服务器修改');assert.equal([...f.tasks.values()][0].priority,'high');assert.equal(f.state.links[f.id].revision,3);
+});
+
+test('an official materialized occurrence uses the shared server date identity',async()=>{
+ const f=fixture();await f.engine.run();
+ const child={path:'Tasks/本期阅读.md',dateCreated:'2026-10-08T01:00:00Z',title:'本期阅读',recurrence_parent:f.id,occurrence_date:'2026-10-09',status:'open'};
+ await f.engine.capture('create',undefined,child);
+ const first=Object.values(f.state.operations)[0];assert.notEqual(first.body.sync_id,f.id);assert.equal(first.body.changes.recurrence_parent,f.id);assert.equal(first.body.changes.occurrence_date,'2026-10-09');
+ await f.engine.capture('create',undefined,child);assert.equal(Object.keys(f.state.operations).length,1,'Metadata echo duplicated the same period');
+});
