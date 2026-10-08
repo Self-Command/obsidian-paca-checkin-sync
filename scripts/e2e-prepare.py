@@ -1,7 +1,7 @@
 import io,json,os,pathlib,subprocess,tarfile,hashlib,urllib.request,time
 root=pathlib.Path(__file__).resolve().parent.parent
 a=root/'acceptance/a';repo='Self-Command/paca-plugin-tasknotes-webhook';source=os.environ['PACA_A_SHA']
-for attempt in range(30):
+for attempt in range(60):
     runs=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs?head_sha={source}&status=success']))['workflow_runs']
     if runs:break
     time.sleep(20)
