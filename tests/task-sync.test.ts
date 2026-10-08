@@ -43,3 +43,10 @@ test('an official materialized occurrence uses the shared server date identity',
  const first=Object.values(f.state.operations)[0];assert.notEqual(first.body.sync_id,f.id);assert.equal(first.body.changes.recurrence_parent,f.id);assert.equal(first.body.changes.occurrence_date,'2026-10-09');
  await f.engine.capture('create',undefined,child);assert.equal(Object.keys(f.state.operations).length,1,'Metadata echo duplicated the same period');
 });
+
+test('a materialized child replaces its inherited mother marker and retains private notes',()=>{
+ const mother='11111111-1111-4111-8111-111111111111',child='22222222-2222-4222-8222-222222222222';
+ const inherited=`<!-- paca-sync-id:${mother} -->\n<!-- paca-task-content:start -->\n母任务正文\n<!-- paca-task-content:end -->\n私人记录`;
+ const result=replaceSharedBody(inherited,'本期正文',child);
+ assert(result.includes(`<!-- paca-sync-id:${child} -->`));assert(!result.includes(`<!-- paca-sync-id:${mother} -->`));assert.equal(sharedBody(result),'本期正文');assert(result.includes('私人记录'));
+});

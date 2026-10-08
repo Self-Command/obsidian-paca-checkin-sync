@@ -31,7 +31,10 @@ for occurrence in occurrences:
     assert parent['task']['path'].removesuffix('.md') in occurrence['task']['recurrence_parent']
 paths={r['task']['path'] for r in occurrences}
 sync_pull();sync_pull()
-assert len(ui_page.evaluate('async()=>{const tasks=await app.plugins.plugins.tasknotes.api.tasks.list();return tasks.filter(t=>t.occurrence_date&&t.title=="服务器每天阅读")}'))==2,'Repeated pull duplicated occurrence notes'
+listed_periods=ui_page.evaluate('async()=>{const tasks=await app.plugins.plugins.tasknotes.api.tasks.list();return tasks.filter(t=>t.occurrence_date&&t.title=="服务器每天阅读")}')
+(ROOT/'verification/recurrence-notes-diagnostic.json').write_text(json.dumps({'paths':sorted(paths),'listed':listed_periods,'links':sync_links()},ensure_ascii=False,indent=2))
+assert {t['path'] for t in listed_periods}==paths,'Occurrence notes were duplicated or lost TaskNotes recognition'
+assert len(listed_periods)==2,'Each official period must appear once in the task list' 
 # The normal official TaskNotes status menu reconciles the parent automatically.
 chosen=occurrences[0]['task']
 open_edit(chosen);ui_page.locator('[data-type="status"]').click();ui_page.locator('.menu-item').filter(has_text=re.compile(r'^Done$')).click();ui_page.locator('.tn-task-modal__button-bar button.mod-cta').click()
