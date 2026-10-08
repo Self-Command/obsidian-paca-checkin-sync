@@ -42,6 +42,8 @@ class CheckinTlsProxy(BaseHTTPRequestHandler):
         try:
             with urllib.request.urlopen(req,timeout=25) as reply:status,payload,heads=reply.status,reply.read(),reply.headers
         except urllib.error.HTTPError as error:status,payload,heads=error.code,error.read(),error.headers
+        if status>=400 and self.path.startswith('/task-sync/'):
+            log=ROOT/'verification/task-sync-http-errors.json';items=json.loads(log.read_text()) if log.exists() else [];items.append({'path':self.path,'method':self.command,'status':status,'message':payload.decode()[:500]});log.write_text(json.dumps(items,ensure_ascii=False,indent=2))
         self.send_response(status)
         for key,value in heads.items():
             if key.lower() not in ('server','date','transfer-encoding','connection','content-length'):self.send_header(key,value)

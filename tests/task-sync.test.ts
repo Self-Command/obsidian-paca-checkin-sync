@@ -24,3 +24,5 @@ test('ordinary content excludes check-in images and preserves private blocks on 
 
 
 test('UI rename retains association when the former path no longer exists',async()=>{const f=fixture();await f.engine.run();const original=[...f.tasks.values()][0];const before={...original};f.tasks.delete(before.path);const renamed={...original,path:'Tasks/修改标题.md',title:'修改标题'};f.tasks.set(renamed.path,renamed);f.host.snapshot=async t=>{if(!f.tasks.has(t.path))throw Error('old note path is gone');return {...t} as TaskSnapshot};await f.engine.capture('update',before,renamed,{title:{before:before.title,after:renamed.title}});const operation=Object.values(f.state.operations)[0];assert.equal(operation.body.sync_id,f.id);assert.equal(f.state.links[f.id].path,renamed.path);assert.deepEqual(operation.body.changes,{title:'修改标题'})});
+
+test('cache-created echoes and normalized tag refreshes do not queue user operations',async()=>{const f=fixture();await f.engine.run();const task=[...f.tasks.values()][0];await f.engine.capture('create',undefined,task);await f.engine.capture('update',task,task,{tags:{before:['学习'],after:['学习']}});assert.equal(Object.keys(f.state.operations).length,0)});

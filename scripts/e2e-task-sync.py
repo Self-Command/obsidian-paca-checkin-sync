@@ -24,10 +24,11 @@ def sync_pull():
     ui_page.wait_for_function('()=>app.plugins.plugins["obsidian-paca-checkin-sync"].status!=="正在同步"',timeout=45000)
 def sync_links():return ui_page.evaluate('()=>app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.links')
 def no_sync_problems():
-    data=ui_page.evaluate('()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return {status:d.status,problems:d.taskState.problems,operations:Object.values(d.taskState.operations).map(o=>({state:o.state,problem:o.problem}))}}')
+    data=ui_page.evaluate('()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return {status:d.status,problems:d.taskState.problems,operations:Object.values(d.taskState.operations).map(o=>({state:o.state,problem:o.problem,kind:o.body.kind,base_revision:o.body.base_revision,fields:Object.keys(o.body.changes)}))}}')
     assert data['status']=='同步完成' and not data['problems'] and not any(op['state'] in ('conflict','failed') for op in data['operations']),data
 sync_pull();no_sync_problems()
 links=sync_links();assert len(links)==6,links
+assert all(link['base']['scheduled'] is None for link in links.values()),'date-only defaults became a server schedule'
 local_tasks=ui_page.evaluate('async()=>app.plugins.plugins.tasknotes.api.tasks.list()')
 assert len([t for t in local_tasks if t['title']=='同名任务'])==2,'same-title imports were merged'
 assert any(t['title']=='已有完成任务' and t['status']=='done' for t in local_tasks)
