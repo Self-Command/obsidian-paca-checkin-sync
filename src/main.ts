@@ -45,11 +45,13 @@ class ConfirmIgnore extends Modal{constructor(app:App,private action:()=>Promise
 class SyncSettings extends PluginSettingTab {
  private pacaStatuses:{id:string;name:string}[]=[];
  constructor(app:App,private p:CheckinSync){super(app,p)}
- display():void{const {containerEl:c}=this;c.empty();c.addClass('paca-sync-settings');c.createEl('h2',{text:'Paca 任务同步'});const save=async()=>{await this.p.persist();this.p.resetEngine();this.p.setAutomatic()};
+ display():void{const {containerEl:c}=this;c.empty();c.addClass('paca-sync-settings');c.createEl('h2',{text:'Paca 任务同步'});c.createEl('h3',{text:'连接'});const save=async()=>{await this.p.persist();this.p.resetEngine();this.p.setAutomatic()};
  new Setting(c).setName('Paca 服务地址').addText(t=>t.setPlaceholder('https://example.com').setValue(this.p.settings.address).onChange(async v=>{this.p.settings.address=v.trim();await save()}));
- new Setting(c).setName('配对码').setDesc('在 Paca 中生成。同一笔记库的电脑和手机可使用同一个配对码。').addText(t=>{t.inputEl.type='password';t.setValue(pairingCode(this.p.settings)).onChange(async v=>{this.p.settings.pairingCode=v.trim();this.p.settings.pairingMode=undefined;delete this.p.settings.token;delete this.p.settings.taskToken;await save()})});
+ new Setting(c).setName('配对码').setDesc('在 Paca 中生成。同一笔记库的电脑和手机可使用同一个配对码。').addText(t=>{t.inputEl.type='password';t.setValue(pairingCode(this.p.settings)).onChange(async v=>{this.p.settings.pairingCode=v.trim();this.p.settings.pairingMode=undefined;delete this.p.settings.token;delete this.p.settings.taskToken;await save()})}).addExtraButton(b=>b.setIcon('copy').setTooltip('复制配对码').onClick(()=>{void navigator.clipboard.writeText(pairingCode(this.p.settings)).then(()=>new Notice('配对码已复制'))}));
+ c.createEl('h3',{text:'同步'});
  new Setting(c).setName('双向任务同步').setDesc('同步任务的创建、修改、状态及删除。').addToggle(t=>t.setValue(this.p.settings.taskSync).onChange(async v=>{this.p.settings.taskSync=v;await save()}));
  new Setting(c).setName('打卡记录和照片').setDesc('与普通任务同步分别控制。').addToggle(t=>t.setValue(this.p.settings.checkinSync).onChange(async v=>{this.p.settings.checkinSync=v;await save()}));
+ c.createEl('h3',{text:'附件与状态'});
  new Setting(c).setName('照片附件目录').setDesc('独立存放照片，不能与任务目录相同或位于其中。').addText(t=>t.setValue(this.p.settings.attachments).onChange(async v=>{this.p.settings.attachments=v;await save()}));
  let states:{value:string;label:string}[]=[];try{states=api(this.app).catalog.statuses()}catch{c.createEl('p',{text:'请先启用官方 TaskNotes 插件。'})}
  for(const [key,label] of [['started','开始打卡后状态'],['completed','结束打卡后状态']] as const)new Setting(c).setName(label).addDropdown(d=>{d.addOption('','请选择任务状态');for(const s of states)d.addOption(s.value,s.label);d.setValue(this.p.settings[key]).onChange(async v=>{this.p.settings[key]=v;await save()})});
