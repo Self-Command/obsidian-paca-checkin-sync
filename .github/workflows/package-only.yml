@@ -1,0 +1,32 @@
+name: Package only
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build plugin
+        run: npm run build
+      - name: Package source-bound plugin
+        run: |
+          mkdir -p release/obsidian-paca-checkin-sync
+          cp main.js manifest.json styles.css release/obsidian-paca-checkin-sync/
+          jq -n --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" '{source_sha:$sha,action_run:$run,tests_run:false,phone_verified:false}' > release/build-info.json
+          cd release
+          zip -r obsidian-paca-checkin-sync.zip obsidian-paca-checkin-sync
+          sha256sum obsidian-paca-checkin-sync.zip obsidian-paca-checkin-sync/* build-info.json > checksums.txt
+      - name: Publish package without test claims
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="v0.1.0-ui.${{ github.run_number }}"
+          printf '同步处理按钮保留设置页滚动位置，打卡处理仅刷新记录列表，并保留历史记录开关。\n\n源码：%s\n本次仅构建与打包，按要求未运行测试。\n' "$GITHUB_SHA" > release-notes.md
+          gh release create "$version" --target "$GITHUB_SHA" --prerelease --title "$version" --notes-file release-notes.md release/obsidian-paca-checkin-sync.zip release/obsidian-paca-checkin-sync/main.js release/obsidian-paca-checkin-sync/manifest.json release/obsidian-paca-checkin-sync/styles.css release/checksums.txt release/build-info.json
