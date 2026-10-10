@@ -18,6 +18,15 @@ photo_context=pw.chromium.launch(headless=True).new_context(ignore_https_errors=
 photo_page=photo_context.new_page();photo_page.goto(card['metadata']['action_url']);photo_page.locator('input[type=file]').first.set_input_files({'name':'打卡.png','mimeType':'image/png','buffer':photo})
 photo_page.get_by_role('button',name='确认打卡',exact=True).click();photo_page.get_by_text('打卡成功',exact=False).first.wait_for(timeout=30000)
 photo_page.screenshot(path=str(ROOT/'verification/checkin-mobile-photo.png'));photo_context.close()
+# Upgrade preserves the saved pairing and the generic settings expose a single input.
+ui_page.evaluate('()=>{app.setting.open();app.setting.openTabById("obsidian-paca-checkin-sync")}')
+ui_page.get_by_text('配对码',exact=True).wait_for(timeout=15000)
+assert ui_page.locator('.paca-sync-settings input[type=password]').count()==1
+assert ui_page.get_by_text('原打卡配对码',exact=True).count()==0
+assert ui_page.get_by_text('任务同步配对码',exact=True).count()==0
+assert 'task.spacedo.org' not in ui_page.locator('.paca-sync-settings').inner_text()
+ui_page.screenshot(path=str(ROOT/'verification/obsidian-generic-single-pairing.png'))
+ui_page.evaluate('()=>app.setting.close()')
 # Use the public user command. TaskNotes mutations are performed by the real plugin.
 def pull():
     ui_page.evaluate('()=>app.commands.executeCommandById("obsidian-paca-checkin-sync:sync-checkin-records")')
@@ -41,5 +50,5 @@ core=request('GET',f'/projects/{project["id"]}/tasks/{paca_task}')['data'];asser
 rows=request('GET',f'/plugins/{plugin_id}/projects/{project["id"]}/connections/{ui_connection_id}/deliveries')['items']
 assert not any(row['state'] in ('error','conflict') for row in rows),[{'state':r['state'],'error':r['error']} for r in rows]
 ui_page.screenshot(path=str(ROOT/'verification/obsidian-photo-writeback.png'))
-(ROOT/'verification/writeback-report.json').write_text(json.dumps({'d_source':os.environ['GITHUB_SHA'],'a_source':os.environ['PACA_A_SHA'],'c_source':os.environ['PACA_C_SHA'],'official_ui_created_task':True,'passwordless_mobile_photo':True,'paca_status_outbox':True,'public_tasknotes_api_status':True,'independent_photo_directory':True,'manual_command':True,'repeat_pull_no_extra_media':True,'writeback_echo_preserves_checkin_metadata':True,'phone_device_test':False},indent=2))
+(ROOT/'verification/writeback-report.json').write_text(json.dumps({'d_source':os.environ['GITHUB_SHA'],'a_source':os.environ['PACA_A_SHA'],'c_source':os.environ['PACA_C_SHA'],'official_ui_created_task':True,'passwordless_mobile_photo':True,'paca_status_outbox':True,'public_tasknotes_api_status':True,'independent_photo_directory':True,'manual_command':True,'single_pairing_input':True,'generic_settings':True,'repeat_pull_no_extra_media':True,'writeback_echo_preserves_checkin_metadata':True,'phone_device_test':False},indent=2))
 if os.environ.get('TASK_SYNC_E2E')=='1':exec((D_ROOT/'scripts/e2e-task-sync.py').read_text(),globals(),locals())
