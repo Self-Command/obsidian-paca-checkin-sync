@@ -18,7 +18,7 @@ request('PUT',sync_base+'/sync-config',{'mode':'enabled','revision':2,'reverse_s
 task_pair=request('POST',sync_base+'/pairing',{},201)
 receive_path=f'/api/v1/plugins/{plugin_id}/receive/{sync_conn["id"]}'
 new_receive='http://127.0.0.1:18280'+receive_path
-ui_page.evaluate('async cfg=>{const tn=app.plugins.plugins.tasknotes;tn.settings.webhooks[0].url=cfg.webhook;await tn.saveSettings();const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.taskToken=cfg.token;d.settings.taskSync=true;d.settings.checkinSync=false;await d.persist();d.resetEngine()}',{'token':task_pair['token'],'webhook':new_receive})
+ui_page.evaluate('async cfg=>{const tn=app.plugins.plugins.tasknotes;tn.settings.webhooks[0].url=cfg.webhook;await tn.saveSettings();const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.pairingCode=cfg.token;d.settings.pairingMode="task";delete d.settings.token;delete d.settings.taskToken;d.settings.taskSync=true;d.settings.checkinSync=false;await d.persist();d.resetEngine()}',{'token':task_pair['token'],'webhook':new_receive})
 def sync_pull():
     ui_page.evaluate('()=>app.commands.executeCommandById("obsidian-paca-checkin-sync:sync-checkin-records")')
     ui_page.wait_for_function('()=>app.plugins.plugins["obsidian-paca-checkin-sync"].status!=="正在同步"',timeout=45000)
