@@ -20,13 +20,13 @@ photo_page.get_by_role('button',name='确认打卡',exact=True).click();photo_pa
 photo_page.screenshot(path=str(ROOT/'verification/checkin-mobile-photo.png'));photo_context.close()
 # Upgrade preserves the saved pairing and the generic settings expose a single input.
 ui_page.bring_to_front()
-ui_page.evaluate('()=>app.setting.open()')
+ui_page.keyboard.press('Control+,')
 try:
     ui_page.locator('.vertical-tab-nav-item').filter(has_text='Paca 任务同步').click(timeout=15000)
     ui_page.get_by_text('配对码',exact=True).wait_for(timeout=15000)
 except Exception:
     ui_page.screenshot(path=str(ROOT/'verification/obsidian-settings-failure.png'))
-    (ROOT/'verification/obsidian-settings-failure.json').write_text(json.dumps(ui_page.evaluate('()=>({body:document.body.innerText,plugin:!!app.plugins.plugins["obsidian-paca-checkin-sync"],tabs:app.setting.pluginTabs?.map(t=>({id:t.id,name:t.name}))})'),ensure_ascii=False,indent=2))
+    (ROOT/'verification/obsidian-settings-failure.json').write_text(json.dumps(ui_page.evaluate('()=>({body:document.body.innerText,plugin:!!app.plugins.plugins["obsidian-paca-checkin-sync"],tabs:app.setting.pluginTabs?.map(t=>({id:t.id,name:t.name})),commands:Object.keys(app.commands.commands).filter(k=>k.includes("setting")),modals:[...document.querySelectorAll(".modal")].map(e=>e.outerHTML),buttons:[...document.querySelectorAll("[aria-label]")].map(e=>({label:e.getAttribute("aria-label"),classes:e.className})).filter(e=>e.label?.toLowerCase().includes("setting"))})'),ensure_ascii=False,indent=2))
     raise
 assert ui_page.locator('.paca-sync-settings input[type=password]').count()==1
 assert ui_page.get_by_text('原打卡配对码',exact=True).count()==0
