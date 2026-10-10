@@ -1,4 +1,5 @@
 import {requestUrl} from 'obsidian';
+import {pairingCode} from './pairing';
 import {SyncProblem,type Settings} from './types';
 import type {TaskSyncServer,TaskChange,TaskConflict,TaskOperation,TaskSnapshot} from './task-sync-types';
 
@@ -10,8 +11,8 @@ export function serviceOrigin(address:string):string {
 export class TaskServer implements TaskSyncServer {
  constructor(readonly settings:Settings){}
  private async request(path:string,body?:unknown):Promise<unknown>{
-  if(!/^[a-f0-9]{64}$/.test(this.settings.taskToken))throw new SyncProblem('token','请填写任务同步配对码，或迁移原打卡配对码。');
-  const response=await requestUrl({url:serviceOrigin(this.settings.address)+'/task-sync/v1'+path,method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+this.settings.taskToken,'X-Sync-Device':this.settings.deviceID,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),throw:false});
+  if(!/^[a-f0-9]{64}$/.test(pairingCode(this.settings)))throw new SyncProblem('token','请填写有效的配对码。');
+  const response=await requestUrl({url:serviceOrigin(this.settings.address)+'/task-sync/v1'+path,method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+pairingCode(this.settings),'X-Sync-Device':this.settings.deviceID,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),throw:false});
   if(response.status===401||response.status===403)throw new SyncProblem('token','任务同步授权已失效，请重新配对。');
   if(response.status===404)throw new SyncProblem('missing','关联任务尚未找到。');
   if(response.status===409)throw new SyncProblem('revision','任务已发生变化，请重新同步后核对。');
@@ -19,8 +20,8 @@ export class TaskServer implements TaskSyncServer {
   return response.json;
  }
  async migrate():Promise<string>{
-  const response=await requestUrl({url:serviceOrigin(this.settings.address)+'/task-sync/v1/pair',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:this.settings.token,device_id:this.settings.deviceID}),throw:false});
-  if(response.status!==201)throw new SyncProblem('token','原配对码暂时无法迁移，请检查配置后重试。');
+  const response=await requestUrl({url:serviceOrigin(this.settings.address)+'/task-sync/v1/pair',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:pairingCode(this.settings),device_id:this.settings.deviceID}),throw:false});
+  if(response.status!==201)throw new SyncProblem('token','配对服务暂不可用，请稍后重试。');
   return (response.json as {token:string}).token;
  }
  async info():Promise<{mode:string}>{return await this.request('/info') as {mode:string}}
