@@ -50,5 +50,26 @@ core=request('GET',f'/projects/{project["id"]}/tasks/{paca_task}')['data'];asser
 rows=request('GET',f'/plugins/{plugin_id}/projects/{project["id"]}/connections/{ui_connection_id}/deliveries')['items']
 assert not any(row['state'] in ('error','conflict') for row in rows),[{'state':r['state'],'error':r['error']} for r in rows]
 ui_page.screenshot(path=str(ROOT/'verification/obsidian-photo-writeback.png'))
+# The server must record actual device delivery, then preserve the same photo on
+# shared ignore/restore and an explicit historical association to a different note.
+record_id=ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].state.pending)[0]')
+ledger=request('GET',cp+'/sync-deliveries')['items']
+delivered=next(row for row in ledger if row['record_id']==record_id)
+assert any(d['state']=='confirmed' and d['media_verified'] and d['record_written'] and d['status_verified'] for d in delivered['devices']),delivered
+ui_page.evaluate('async record=>app.plugins.plugins["obsidian-paca-checkin-sync"].engine.action(record,"ignore")',record_id)
+assert next(row for row in request('GET',cp+'/sync-deliveries')['items'] if row['record_id']==record_id)['policy']=='ignored'
+ui_page.evaluate('async record=>app.plugins.plugins["obsidian-paca-checkin-sync"].engine.action(record,"restore")',record_id)
+assert ui_page.evaluate('record=>app.plugins.plugins["obsidian-paca-checkin-sync"].state.pending[record].done',record_id)
+command('TaskNotes create','Create new task')
+ui_page.locator('.title-input:visible,.title-input-detailed:visible').first.fill('历史打卡保留笔记')
+ui_page.locator('.tn-task-modal__button-bar button.mod-cta').click()
+history_source=wait_event('task.created','历史打卡保留笔记')
+history_before=ui_page.evaluate('async path=>app.plugins.plugins.tasknotes.api.tasks.get(path)',history_source['path'])
+ui_page.evaluate('async cfg=>{const task=await app.plugins.plugins.tasknotes.api.tasks.get(cfg.path);await app.plugins.plugins["obsidian-paca-checkin-sync"].engine.action(cfg.record,"associate",task)}',{'record':record_id,'path':history_source['path']})
+history_after=ui_page.evaluate('async path=>{const task=await app.plugins.plugins.tasknotes.api.tasks.get(path);return {status:task.status,text:await app.vault.read(app.vault.getAbstractFileByPath(path)),photos:app.vault.getFiles().filter(f=>f.path.startsWith("PushGo附件/")).length}}',history_source['path'])
+assert history_after['status']==history_before['status'] and '结束打卡' in history_after['text'] and '![[PushGo附件/' in history_after['text'] and history_after['photos']==1,history_after
+assert request('GET',f'/projects/{project["id"]}/tasks/{paca_task}')['data']['status_id']==done_state
+ui_page.screenshot(path=str(ROOT/'verification/obsidian-historical-association.png'))
+(ROOT/'verification/delivery-writeback-report.json').write_text(json.dumps({'actual_device_stages_confirmed':True,'ignore_restore_preserves_photo':True,'historical_association_records_only':True,'target_status_preserved':True,'original_paca_status_preserved':True,'no_extra_media':True},indent=2))
 (ROOT/'verification/writeback-report.json').write_text(json.dumps({'d_source':os.environ['GITHUB_SHA'],'a_source':os.environ['PACA_A_SHA'],'c_source':os.environ['PACA_C_SHA'],'official_ui_created_task':True,'passwordless_mobile_photo':True,'paca_status_outbox':True,'public_tasknotes_api_status':True,'independent_photo_directory':True,'manual_command':True,'single_pairing_input':True,'generic_settings':True,'repeat_pull_no_extra_media':True,'writeback_echo_preserves_checkin_metadata':True,'phone_device_test':False},indent=2))
 if os.environ.get('TASK_SYNC_E2E')=='1':exec((D_ROOT/'scripts/e2e-task-sync.py').read_text(),globals(),locals())
