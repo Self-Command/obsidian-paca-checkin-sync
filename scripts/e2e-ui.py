@@ -20,20 +20,27 @@ photo_page.get_by_role('button',name='确认打卡',exact=True).click();photo_pa
 photo_page.screenshot(path=str(ROOT/'verification/checkin-mobile-photo.png'));photo_context.close()
 # Upgrade preserves the saved pairing and the generic settings expose a single input.
 ui_page.bring_to_front()
-ui_page.keyboard.press('Control+,')
+ui_page.evaluate('()=>app.commands.executeCommandById("app:open-settings")')
+settings_page=ui_page
 try:
-    ui_page.locator('.vertical-tab-nav-item').filter(has_text='Paca 任务同步').click(timeout=15000)
-    ui_page.get_by_text('配对码',exact=True).wait_for(timeout=15000)
+    for _ in range(60):
+        settings_page=next((page for page in context.pages if page.locator('.vertical-tab-nav-item').filter(has_text='Paca 任务同步').count()),None)
+        if settings_page:break
+        time.sleep(.25)
+    assert settings_page is not None, 'settings window did not expose the plugin tab'
+    settings_page.locator('.vertical-tab-nav-item').filter(has_text='Paca 任务同步').click(timeout=15000)
+    settings_page.get_by_text('配对码',exact=True).wait_for(timeout=15000)
 except Exception:
     ui_page.screenshot(path=str(ROOT/'verification/obsidian-settings-failure.png'))
-    (ROOT/'verification/obsidian-settings-failure.json').write_text(json.dumps(ui_page.evaluate('()=>({body:document.body.innerText,plugin:!!app.plugins.plugins["obsidian-paca-checkin-sync"],tabs:app.setting.pluginTabs?.map(t=>({id:t.id,name:t.name})),commands:Object.keys(app.commands.commands).filter(k=>k.includes("setting")),modals:[...document.querySelectorAll(".modal")].map(e=>e.outerHTML),buttons:[...document.querySelectorAll("[aria-label]")].map(e=>({label:e.getAttribute("aria-label"),classes:e.className})).filter(e=>e.label?.toLowerCase().includes("setting"))})'),ensure_ascii=False,indent=2))
+    (ROOT/'verification/obsidian-settings-failure.json').write_text(json.dumps({'pages':[{'url':page.url,'body':page.locator('body').inner_text()[:12000]} for page in context.pages],'runtime':ui_page.evaluate('()=>({plugin:!!app.plugins.plugins["obsidian-paca-checkin-sync"],tabs:app.setting.pluginTabs?.map(t=>({id:t.id,name:t.name})),commands:Object.keys(app.commands.commands).filter(k=>k.includes("setting"))})')},ensure_ascii=False,indent=2))
     raise
-assert ui_page.locator('.paca-sync-settings input[type=password]').count()==1
-assert ui_page.get_by_text('原打卡配对码',exact=True).count()==0
-assert ui_page.get_by_text('任务同步配对码',exact=True).count()==0
-assert 'task.spacedo.org' not in ui_page.locator('.paca-sync-settings').inner_text()
-ui_page.screenshot(path=str(ROOT/'verification/obsidian-generic-single-pairing.png'))
-ui_page.evaluate('()=>app.setting.close()')
+assert settings_page.locator('.paca-sync-settings input[type=password]').count()==1
+assert settings_page.get_by_text('原打卡配对码',exact=True).count()==0
+assert settings_page.get_by_text('任务同步配对码',exact=True).count()==0
+assert 'task.spacedo.org' not in settings_page.locator('.paca-sync-settings').inner_text()
+settings_page.screenshot(path=str(ROOT/'verification/obsidian-generic-single-pairing.png'))
+if settings_page==ui_page:ui_page.evaluate('()=>app.setting.close()')
+else:settings_page.close()
 # Use the public user command. TaskNotes mutations are performed by the real plugin.
 def pull():
     ui_page.evaluate('()=>app.commands.executeCommandById("obsidian-paca-checkin-sync:sync-checkin-records")')
