@@ -1,4 +1,5 @@
 """Click the real installed Obsidian cleanup UI and verify remote/local effects."""
+ui_page.evaluate('async code=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.pairingCode=code;d.settings.pairingMode="checkin";d.settings.taskSync=false;d.settings.checkinSync=true;await d.persist();d.resetEngine()}',paired['token'])
 record_state=ui_page.evaluate('record=>app.plugins.plugins["obsidian-paca-checkin-sync"].state.pending[record]',record_id)
 assert record_state and record_state['recordWritten']
 ui_page.evaluate('async record=>app.plugins.plugins["obsidian-paca-checkin-sync"].engine.action(record,"ignore")',record_id)
