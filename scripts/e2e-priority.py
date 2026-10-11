@@ -155,19 +155,20 @@ for _ in range(60):
 assert priority_settings
 priority_settings.locator('.vertical-tab-nav-item').filter(has_text='Paca 任务同步').click()
 priority_row=priority_settings.locator('.setting-item').filter(has_text='同步优先规则')
+priority_select=priority_row.get_by_role('combobox')
 try:
-    priority_row.locator('select').wait_for(state='visible',timeout=30000)
-    labels=priority_row.locator('select option').all_text_contents()
+    priority_select.wait_for(state='visible',timeout=30000)
+    labels=priority_select.locator('option').all_text_contents()
     assert labels==['普通双向同步','以服务器为准','以 Obsidian 为准'],labels
     for selected in ('latest','server','local','server'):
-        priority_row.locator('select').select_option(selected)
+        priority_select.select_option(selected)
         ui_page.wait_for_function('value=>app.plugins.plugins["obsidian-paca-checkin-sync"].settings.syncPriority===value',arg=selected)
         sync_pull()
         no_sync_problems()
-        priority_row.locator('select').wait_for(state='visible',timeout=30000)
+        priority_select.wait_for(state='visible',timeout=30000)
 except Exception:
     priority_settings.screenshot(path=str(ROOT/'verification/obsidian-priority-settings-failure.png'))
-    (ROOT/'verification/obsidian-priority-settings-failure.json').write_text(json.dumps({'body':priority_settings.locator('body').inner_text(),'options':priority_row.locator('select option').all_text_contents()},ensure_ascii=False,indent=2))
+    (ROOT/'verification/obsidian-priority-settings-failure.json').write_text(json.dumps({'body':priority_settings.locator('body').inner_text(),'options':priority_select.locator('option').all_text_contents()},ensure_ascii=False,indent=2))
     raise
 assert priority_settings.get_by_role('button',name='采用服务器内容',exact=True).count()==0
 assert priority_settings.get_by_role('button',name='采用本地内容',exact=True).count()==0
