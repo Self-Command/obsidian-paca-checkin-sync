@@ -15,7 +15,7 @@ export class TaskServer implements TaskSyncServer {
   const response=await requestUrl({url:serviceOrigin(this.settings.address)+'/task-sync/v1'+path,method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+pairingCode(this.settings),'X-Sync-Device':this.settings.deviceID,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),throw:false});
   if(response.status===401||response.status===403)throw new SyncProblem('token','任务同步授权已失效，请重新配对。');
   if(response.status===404)throw new SyncProblem('missing','关联任务尚未找到。');
-  if(response.status===409)throw new SyncProblem('revision','任务已发生变化，请重新同步后核对。');
+  if(response.status===409)throw new SyncProblem('revision','任务刚有更新，将在下次同步重试。');
   if(response.status<200||response.status>=300)throw new SyncProblem('unavailable','任务同步服务暂时无法连接，请稍后重试。');
   return response.json;
  }
@@ -26,7 +26,7 @@ export class TaskServer implements TaskSyncServer {
  }
  async info():Promise<{mode:string}>{return await this.request('/info') as {mode:string}}
  async changes(cursor:number):Promise<{items:TaskChange[];next_cursor:number;has_more:boolean;mode:string}>{return await this.request('/changes?after='+cursor) as {items:TaskChange[];next_cursor:number;has_more:boolean;mode:string}}
- async binding(id:string,action:'claim'|'confirm',path?:string,created?:string):Promise<{state:string;path?:string;note_created?:string}>{return await this.request('/bindings',{sync_id:id,action,...(path?{path,note_created:created}:{})}) as {state:string;path?:string;note_created?:string}}
+ async binding(id:string,action:'claim'|'confirm'|'restore',path?:string,created?:string):Promise<{state:string;path?:string;note_created?:string}>{return await this.request('/bindings',{sync_id:id,action,...(path?{path,note_created:created}:{})}) as {state:string;path?:string;note_created?:string}}
  async submit(operation:TaskOperation):Promise<{state:string}>{return await this.request('/operations',operation) as {state:string}}
  async operation(id:string):Promise<{state:string;error?:string;result?:{sync_id?:string}}>{return await this.request('/operations/'+encodeURIComponent(id)) as {state:string;error?:string;result?:{sync_id?:string}}}
  async receipt(item:TaskChange,op:string,fields:string[]):Promise<{id:string}>{return await this.request('/receipts',{sync_id:item.sync_id,revision:item.revision,op_id:op,expected:item.snapshot,fields}) as {id:string}}
