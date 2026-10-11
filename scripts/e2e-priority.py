@@ -161,7 +161,7 @@ try:
     assert labels==['普通双向同步','以服务器为准','以 Obsidian 为准'],labels
     for selected in ('latest','server','local','server'):
         priority_row.locator('select').select_option(selected)
-        ui_page.wait_for_function('value=>app.plugins.plugins["obsidian-paca-checkin-sync"].settings.syncPriority===value',selected)
+        ui_page.wait_for_function('value=>app.plugins.plugins["obsidian-paca-checkin-sync"].settings.syncPriority===value',arg=selected)
         no_sync_problems()
         priority_row.locator('select').wait_for(state='visible',timeout=30000)
 except Exception:
