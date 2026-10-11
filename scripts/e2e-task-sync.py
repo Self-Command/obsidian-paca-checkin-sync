@@ -24,7 +24,11 @@ def sync_pull():
     ui_page.wait_for_function('()=>app.plugins.plugins["obsidian-paca-checkin-sync"].status!=="正在同步"',timeout=45000)
 def sync_links():return ui_page.evaluate('()=>app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.links')
 def no_sync_problems():
-    data=ui_page.evaluate('()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return {status:d.status,problems:d.taskState.problems,operations:Object.values(d.taskState.operations).map(o=>({state:o.state,problem:o.problem,kind:o.body.kind,base_revision:o.body.base_revision,fields:Object.keys(o.body.changes)}))}}')
+    for _ in range(90):
+        data=ui_page.evaluate('()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return {status:d.status,problems:d.taskState.problems,operations:Object.values(d.taskState.operations).map(o=>({state:o.state,problem:o.problem,kind:o.body.kind,base_revision:o.body.base_revision,fields:Object.keys(o.body.changes)}))}}')
+        if data['status']=='同步完成' and not data['problems'] and not data['operations']:return
+        if any(op['state'] in ('conflict','failed') for op in data['operations']):break
+        sync_pull();time.sleep(.5)
     assert data['status']=='同步完成' and not data['problems'] and not any(op['state'] in ('conflict','failed') for op in data['operations']),data
 sync_pull();no_sync_problems()
 links=sync_links();assert len(links)==6,links
