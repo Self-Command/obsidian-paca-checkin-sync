@@ -24,6 +24,7 @@ export class TaskServer implements TaskSyncServer {
   if(response.status!==201)throw new SyncProblem('token','配对服务暂不可用，请稍后重试。');
   return (response.json as {token:string}).token;
  }
+ async preference(prefer:'latest'|'server'|'local'):Promise<void>{await this.request('/preference',{prefer})}
  async info():Promise<{mode:string}>{return await this.request('/info') as {mode:string}}
  async changes(cursor:number):Promise<{items:TaskChange[];next_cursor:number;has_more:boolean;mode:string}>{return await this.request('/changes?after='+cursor) as {items:TaskChange[];next_cursor:number;has_more:boolean;mode:string}}
  async binding(id:string,action:'claim'|'confirm'|'restore',path?:string,created?:string):Promise<{state:string;path?:string;note_created?:string}>{return await this.request('/bindings',{sync_id:id,action,...(path?{path,note_created:created}:{})}) as {state:string;path?:string;note_created?:string}}

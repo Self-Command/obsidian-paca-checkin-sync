@@ -1,5 +1,5 @@
 """Priority rules on real TaskNotes, with local changes queued before upload."""
-ui_page.evaluate('async()=>{const tn=app.plugins.plugins.tasknotes;for(const hook of tn.settings.webhooks)hook.enabled=false;await tn.saveSettings();const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.auto=false;await d.persist();d.setAutomatic()}')
+ui_page.evaluate('async()=>{const tn=app.plugins.plugins.tasknotes;for(const hook of tn.settings.webhooks)hook.active=false;await tn.saveSettings();const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.auto=false;await d.persist();d.setAutomatic()}')
 
 def priority_pull_until(predicate):
     for _ in range(160):
@@ -99,6 +99,45 @@ for prefer in ('latest','server','local'):
     priority_pull_until(lambda:not ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.operations).length'))
     no_sync_problems()
 
+    # A completely new offline task, with its template and later edits, creates
+    # one native task and can then be deleted through the same official API.
+    offline=ui_page.evaluate('''async mode=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"],api=app.plugins.plugins.tasknotes.api;
+      let note=await api.tasks.create({title:"离线新建 "+mode,status:"open",priority:"normal",details:"首次任务说明"});await d.captures;
+      note=await api.tasks.update(note.path,{title:"离线新建后修改 "+mode,priority:"high"});await d.captures;return note;
+    }''',prefer)
+    assert ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.operations).length')>0
+    def offline_created_once():
+        rows=[x for x in request('GET',f'/projects/{sync_project["id"]}/tasks?page_size=200')['data']['items'] if x['title']=='离线新建后修改 '+prefer]
+        assert len(rows)<=1,'Offline creation generated duplicate native tasks'
+        return len(rows)==1 and rows[0]['importance']==75
+    priority_pull_until(offline_created_once)
+    priority_pull_until(lambda:not ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.operations).length'))
+    ui_page.evaluate('async path=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];await app.plugins.plugins.tasknotes.api.tasks.delete(path);await d.captures}',offline['path'])
+    priority_pull_until(lambda:not any(x['title']=='离线新建后修改 '+prefer for x in request('GET',f'/projects/{sync_project["id"]}/tasks?page_size=200')['data']['items']))
+    priority_pull_until(lambda:not ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.operations).length'))
+    no_sync_problems()
+
+# A source can still use the official webhook while the companion does not
+# capture the mutation. That source must honor the same selected preference.
+for prefer in ('latest','server','local'):
+    ui_page.evaluate('async mode=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.syncPriority=mode;await d.persist();d.resetEngine()}',prefer)
+    webhook_core,webhook_id=priority_new_native('官方 Webhook 优先规则 '+prefer)
+    webhook_note=priority_note(webhook_id)
+    request('PATCH',f'/projects/{sync_project["id"]}/tasks/{webhook_core["id"]}',{'title':'Webhook 服务器修改 '+prefer})
+    ui_page.evaluate('async()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.taskSync=false;const tn=app.plugins.plugins.tasknotes;for(const hook of tn.settings.webhooks)hook.active=true;await tn.saveSettings();await d.persist() }')
+    ui_page.evaluate('async cfg=>app.plugins.plugins.tasknotes.api.tasks.update(cfg.path,{title:"Webhook 本地修改 "+cfg.mode,priority:"high"})',{'path':webhook_note['path'],'mode':prefer})
+    expected='Webhook 服务器修改 '+prefer if prefer=='server' else 'Webhook 本地修改 '+prefer
+    for _ in range(160):
+        core=request('GET',f'/projects/{sync_project["id"]}/tasks/{webhook_core["id"]}')['data']
+        if core['title']==expected and core['importance']==75:break
+        time.sleep(.5)
+    else:raise AssertionError('Official webhook ignored selected preference: '+prefer)
+    ui_page.evaluate('async()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.taskSync=true;await d.persist();d.resetEngine()}')
+    priority_pull_until(lambda:(priority_note(webhook_id) or {}).get('title')==expected)
+    priority_pull_until(lambda:not ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.operations).length'))
+    no_sync_problems()
+    ui_page.evaluate('async()=>{const tn=app.plugins.plugins.tasknotes;for(const hook of tn.settings.webhooks)hook.active=false;await tn.saveSettings()}')
+
 # The priority selector is visible and the former per-item choices are absent.
 ui_page.evaluate('()=>app.commands.executeCommandById("app:open-settings")')
 for _ in range(60):
@@ -115,4 +154,4 @@ priority_settings.screenshot(path=str(ROOT/'verification/obsidian-sync-priority.
 if priority_settings==ui_page:ui_page.evaluate('()=>app.setting.close()')
 else:priority_settings.close()
 ui_page.evaluate('async()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.syncPriority="server";await d.persist();d.resetEngine()}')
-(ROOT/'verification/sync-priority-ui-report.json').write_text(json.dumps({'server_priority_both_directions':True,'obsidian_priority_both_directions':True,'unrelated_fields_preserved':True,'offline_edit_against_delete_automatic':True,'offline_edits_then_delete_three_modes':True,'local_delete_against_server_edit_three_modes':True,'no_duplicate_restoration':True,'selector_three_options':True,'ordinary_server_received_order':True,'manual_conflict_buttons_removed':True,'official_tasknotes_runtime':True},indent=2))
+(ROOT/'verification/sync-priority-ui-report.json').write_text(json.dumps({'server_priority_both_directions':True,'obsidian_priority_both_directions':True,'unrelated_fields_preserved':True,'offline_edit_against_delete_automatic':True,'offline_edits_then_delete_three_modes':True,'offline_create_edit_delete_three_modes':True,'official_webhook_three_priorities':True,'local_delete_against_server_edit_three_modes':True,'no_duplicate_restoration':True,'selector_three_options':True,'ordinary_server_received_order':True,'manual_conflict_buttons_removed':True,'official_tasknotes_runtime':True},indent=2))
