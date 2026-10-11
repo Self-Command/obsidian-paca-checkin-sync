@@ -21,6 +21,7 @@ export default class CheckinSync extends Plugin {
   this.addCommand({id:'connect-existing-tasks',name:'选择已有任务接入 Paca',callback:()=>void this.connectExisting()});
   this.addSettingTab(new SyncSettings(this.app,this));this.app.workspace.onLayoutReady(()=>{this.hookTaskEvents();if(this.settings.auto&&this.settings.address&&pairingCode(this.settings))void this.sync(false)});
   this.registerDomEvent(document,'visibilitychange',()=>{if(document.visibilityState==='visible'&&this.settings.auto)void this.sync(false)});this.registerDomEvent(window,'focus',()=>{if(this.settings.auto)void this.sync(false)});
+  this.registerEvent(this.app.vault.on('modify',file=>{if(!(file instanceof TFile)||!this.settings.taskSync)return;this.captures=this.captures.catch(()=>{}).then(()=>this.taskEngine.captureBody(file.path)).catch(()=>{new Notice('正文更改暂未保存到同步队列，请保留笔记并手动提交当前任务更改。')})}));
   this.registerEvent(this.app.vault.on('rename',(file,oldPath)=>{if(!(file instanceof TFile))return;for(const link of [...Object.values(this.state.links),...Object.values(this.taskState.links)])if(link.path===oldPath)link.path=file.path;void this.persist();}));this.setAutomatic();
  }
  onunload():void{window.clearInterval(this.automatic)}
