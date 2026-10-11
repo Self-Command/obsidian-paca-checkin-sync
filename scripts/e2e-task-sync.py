@@ -29,6 +29,9 @@ def no_sync_problems():
         if data['status']=='同步完成' and not data['problems'] and not data['operations']:return
         if any(op['state'] in ('conflict','failed') for op in data['operations']):break
         sync_pull();time.sleep(.5)
+    diagnostic=ui_page.evaluate('()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return {mode:d.settings.syncPriority,status:d.status,tasks:d.taskState}}')
+    diagnostic['preview']=request('GET',sync_base+'/sync-preview')
+    (ROOT/'verification/sync-status-failure.json').write_text(json.dumps(diagnostic,ensure_ascii=False,indent=2))
     assert data['status']=='同步完成' and not data['problems'] and not any(op['state'] in ('conflict','failed') for op in data['operations']),data
 sync_pull();no_sync_problems()
 links=sync_links();assert len(links)==6,links
