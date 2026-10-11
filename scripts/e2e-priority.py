@@ -6,7 +6,11 @@ def priority_pull_until(predicate):
         sync_pull()
         if predicate():return
         time.sleep(.5)
-    raise AssertionError(ui_page.evaluate('()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return {status:d.status,problems:d.taskState.problems,operations:d.taskState.operations}}'))
+    diagnostic=ui_page.evaluate('()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return {mode:d.settings.syncPriority,status:d.status,tasks:d.taskState}}')
+    diagnostic['native_tasks']=request('GET',f'/projects/{sync_project["id"]}/tasks?page_size=200')['data']['items']
+    diagnostic['preview']=request('GET',sync_base+'/sync-preview')
+    (ROOT/'verification/sync-priority-failure.json').write_text(json.dumps(diagnostic,ensure_ascii=False,indent=2))
+    raise AssertionError({'status':diagnostic['status'],'mode':diagnostic['mode'],'problems':diagnostic['tasks']['problems'],'operations':diagnostic['tasks']['operations']})
 
 def priority_note(identity):
     return ui_page.evaluate('async id=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];return d.taskState.links[id]?app.plugins.plugins.tasknotes.api.tasks.get(d.taskState.links[id].path):null}',identity)
@@ -112,7 +116,10 @@ for prefer in ('latest','server','local'):
         return len(rows)==1 and rows[0]['importance']==75
     priority_pull_until(offline_created_once)
     priority_pull_until(lambda:not ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.operations).length'))
+    no_sync_problems()
     ui_page.evaluate('async path=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];await app.plugins.plugins.tasknotes.api.tasks.delete(path);await d.captures}',offline['path'])
+    deleted_offline=ui_page.evaluate('()=>app.plugins.plugins["obsidian-paca-checkin-sync"].taskState')
+    (ROOT/'verification'/('sync-priority-offline-delete-'+prefer+'.json')).write_text(json.dumps({'client':deleted_offline,'preview':request('GET',sync_base+'/sync-preview')},ensure_ascii=False,indent=2))
     priority_pull_until(lambda:not any(x['title']=='离线新建后修改 '+prefer for x in request('GET',f'/projects/{sync_project["id"]}/tasks?page_size=200')['data']['items']))
     priority_pull_until(lambda:not ui_page.evaluate('()=>Object.keys(app.plugins.plugins["obsidian-paca-checkin-sync"].taskState.operations).length'))
     no_sync_problems()
