@@ -69,6 +69,6 @@ export class TaskSyncEngine{
   const updated=Object.keys(patch).length?await this.host.update(link.path,patch,item.sync_id):task;const actual=await this.host.snapshot(updated);
   // A receipt confirms only its declared fields; other local edits keep their own operation.
   for(const key of taskFields)if(key in patch&&!equivalent(actual[key],item.snapshot[key]))throw new SyncProblem('verification','任务写入尚未确认，请重新同步。');
-  await this.server.ack(link.receipt,actual,updated.path,updated.dateCreated??'');link.path=updated.path;link.created=updated.dateCreated??'';link.base=item.snapshot;link.observedDetails=actual.details;link.revision=item.revision;link.problem=undefined;link.receipt=undefined;link.receiptOp=undefined;link.receiptExpected=undefined;link.receiptFields=undefined;this.host.bound(item.sync_id,link);
+  await this.server.ack(link.receipt,actual,updated.path,updated.dateCreated??'');link.path=updated.path;link.created=updated.dateCreated??'';link.base=item.snapshot;link.observedDetails=actual.details;link.revision=item.revision;link.deleted=false;link.problem=undefined;link.receipt=undefined;link.receiptOp=undefined;link.receiptExpected=undefined;link.receiptFields=undefined;this.host.bound(item.sync_id,link);
  }
 }
