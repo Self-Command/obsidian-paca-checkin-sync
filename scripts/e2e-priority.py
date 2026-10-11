@@ -145,6 +145,7 @@ for prefer in ('latest','server','local'):
     no_sync_problems()
     ui_page.evaluate('async()=>{const tn=app.plugins.plugins.tasknotes;for(const hook of tn.settings.webhooks)hook.active=false;await tn.saveSettings()}')
 
+(ROOT/'verification/sync-priority-runtime-report.json').write_text(json.dumps({'three_modes':['latest','server','local'],'field_collisions_passed':True,'both_directions_passed':True,'offline_create_edit_delete_passed':True,'queued_rename_then_delete_passed':True,'webhook_three_modes_passed':True,'operations_empty':True,'problems_empty':True},indent=2))
 # The priority selector is visible and the former per-item choices are absent.
 ui_page.evaluate('()=>app.commands.executeCommandById("app:open-settings")')
 for _ in range(60):
@@ -154,11 +155,23 @@ for _ in range(60):
 assert priority_settings
 priority_settings.locator('.vertical-tab-nav-item').filter(has_text='Paca 任务同步').click()
 priority_row=priority_settings.locator('.setting-item').filter(has_text='同步优先规则')
-assert priority_row.locator('select option').all_text_contents()==['普通双向同步','以服务器为准','以 Obsidian 为准']
+try:
+    priority_row.locator('select').wait_for(state='visible',timeout=30000)
+    labels=priority_row.locator('select option').all_text_contents()
+    assert labels==['普通双向同步','以服务器为准','以 Obsidian 为准'],labels
+    for selected in ('latest','server','local','server'):
+        priority_row.locator('select').select_option(selected)
+        ui_page.wait_for_function('value=>app.plugins.plugins["obsidian-paca-checkin-sync"].settings.syncPriority===value',selected)
+        no_sync_problems()
+        priority_row.locator('select').wait_for(state='visible',timeout=30000)
+except Exception:
+    priority_settings.screenshot(path=str(ROOT/'verification/obsidian-priority-settings-failure.png'))
+    (ROOT/'verification/obsidian-priority-settings-failure.json').write_text(json.dumps({'body':priority_settings.locator('body').inner_text(),'options':priority_row.locator('select option').all_text_contents()},ensure_ascii=False,indent=2))
+    raise
 assert priority_settings.get_by_role('button',name='采用服务器内容',exact=True).count()==0
 assert priority_settings.get_by_role('button',name='采用本地内容',exact=True).count()==0
 priority_settings.screenshot(path=str(ROOT/'verification/obsidian-sync-priority.png'))
 if priority_settings==ui_page:ui_page.evaluate('()=>app.setting.close()')
 else:priority_settings.close()
 ui_page.evaluate('async()=>{const d=app.plugins.plugins["obsidian-paca-checkin-sync"];d.settings.syncPriority="server";await d.persist();d.resetEngine()}')
-(ROOT/'verification/sync-priority-ui-report.json').write_text(json.dumps({'server_priority_both_directions':True,'obsidian_priority_both_directions':True,'unrelated_fields_preserved':True,'offline_edit_against_delete_automatic':True,'offline_edits_then_delete_three_modes':True,'offline_create_edit_delete_three_modes':True,'official_webhook_three_priorities':True,'local_delete_against_server_edit_three_modes':True,'no_duplicate_restoration':True,'selector_three_options':True,'ordinary_server_received_order':True,'manual_conflict_buttons_removed':True,'official_tasknotes_runtime':True},indent=2))
+(ROOT/'verification/sync-priority-ui-report.json').write_text(json.dumps({'server_priority_both_directions':True,'obsidian_priority_both_directions':True,'unrelated_fields_preserved':True,'offline_edit_against_delete_automatic':True,'offline_edits_then_delete_three_modes':True,'offline_create_edit_delete_three_modes':True,'official_webhook_three_priorities':True,'local_delete_against_server_edit_three_modes':True,'no_duplicate_restoration':True,'selector_three_options':True,'selector_changes_actual_preference':True,'ordinary_server_received_order':True,'manual_conflict_buttons_removed':True,'official_tasknotes_runtime':True},indent=2))
